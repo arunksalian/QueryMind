@@ -1,0 +1,137 @@
+# Schema annotations for the orders domain
+# These provide business context that raw schema introspection can't capture.
+# The LLM uses these to generate accurate, meaningful queries.
+
+tables:
+  orders:
+    description: "Customer purchase orders. One row per order."
+    business_context: >
+      An order is considered 'active' when status is NOT 'cancelled' and shipped_at IS NULL.
+      Revenue calculations should ALWAYS exclude cancelled orders.
+      The total_amount is stored in USD cents — divide by 100 for display.
+    columns:
+      id:
+        description: "Primary key, UUID v4"
+      customer_id:
+        description: "FK to customers.id"
+      status:
+        type: "enum"
+        values: ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"]
+        notes: "There is NO 'active' status value — filter by status != 'cancelled' instead"
+      total_amount:
+        unit: "USD cents"
+        notes: "Divide by 100 to get dollar amount. Includes tax."
+      tax_amount:
+        unit: "USD cents"
+        notes: "Included in total_amount, not additive"
+      created_at:
+        description: "Order placement timestamp (UTC)"
+      shipped_at:
+        description: "NULL until order ships. Use for fulfillment queries."
+      delivered_at:
+        description: "NULL until delivery confirmed."
+    common_queries:
+      - name: "monthly_revenue"
+        description: "Total revenue for a given month, excluding cancelled orders"
+        sql: >
+          SELECT SUM(total_amount) / 100 AS revenue_usd
+          FROM orders
+          WHERE status != 'cancelled'
+            AND created_at >= DATE_TRUNC('month', $1::date)
+            AND created_at < DATE_TRUNC('month', $1::date) + INTERVAL '1 month'
+      - name: "order_status_distribution"
+        description: "Count of orders by status"
+        sql: >
+          SELECT status, COUNT(*) AS order_count
+          FROM orders
+          GROUP BY status
+          ORDER BY order_count DESC
+    relationships:
+      - target: "order_items"
+        join: "orders.id = order_items.order_id"
+        type: "one-to-many"
+        notes: "An order has 1+ items"
+      - target: "customers"
+        join: "orders.customer_id = customers.id"
+        type: "many-to-one"
+
+  order_items:
+    description: "Individual line items within an order."
+    columns:
+      id:
+        description: "Primary key"
+      order_id:
+        description: "FK to orders.id"
+      product_id:
+        description: "FK to products.id"
+      quantity:
+        description: "Number of units ordered (always >= 1)"
+      unit_price:
+        unit: "USD cents"
+        notes: "Price at time of order — may differ from current product price"
+    relationships:
+      - target: "products"
+        join: "order_items.product_id = products.id"
+        type: "many-to-one"
+
+  customers:
+    description: "Registered customer accounts."
+    business_context: >
+      A customer is 'active' if they placed an order in the last 12 months.
+      email is unique and used as the login identifier.
+    columns:
+      id:
+        description: "Primary key, UUID v4"
+      email:
+        description: "Unique, used for login"
+        notes: "Always lowercase"
+      name:
+        description: "Display name"
+      created_at:
+        description: "Account registration timestamp"
+
+  products:
+    description: "Product catalog."
+    columns:
+      id:
+        description: "Primary key"
+      name:
+        description: "Product display name"
+      category_id:
+        description: "FK to categories.id"
+      price:
+        unit: "USD cents"
+        notes: "Current list price — order_items.unit_price captures historical price"
+      is_active:
+        description: "Soft delete flag. Inactive products are hidden from catalog."
+
+collections:
+  orders:
+    description: "MongoDB mirror of orders for analytics workloads"
+    field_naming: "camelCase"
+    sample_document: |
+      {
+        "_id": "ObjectId",
+        "customerId": "string (UUID)",
+        "status": "string (enum: pending|confirmed|processing|shipped|delivered|cancelled)",
+        "items": [
+          {
+            "productId": "string",
+            "quantity": "int",
+            "unitPrice": "int (cents)"
+          }
+        ],
+        "totalAmount": "int (cents)",
+        "createdAt": "ISODate",
+        "shippedAt": "ISODate | null"
+      }
+    common_pipelines:
+      - name: "top_customers"
+        description: "Top 10 customers by total spending"
+        pipeline: |
+          [
+            {"$match": {"status": {"$ne": "cancelled"}}},
+            {"$group": {"_id": "$customerId", "totalSpent": {"$sum": "$totalAmount"}}},
+            {"$sort": {"totalSpent": -1}},
+            {"$limit": 10}
+          ]

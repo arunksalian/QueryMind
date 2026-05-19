@@ -1,0 +1,69 @@
+[project]
+name = "querymind"
+version = "0.1.0"
+description = "AI agent with memory that converts natural language into SQL/MongoDB queries and produces n8n workflow nodes"
+requires-python = ">=3.12"
+dependencies = [
+    # LLM
+    "openai>=1.40.0",
+
+    # Web framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+
+    # Database clients
+    "asyncpg>=0.30.0",
+    "motor>=3.6.0",
+    "pymongo>=4.9.0",
+
+    # Memory & caching
+    "qdrant-client>=1.12.0",
+    "redis>=5.2.0",
+
+    # Query validation
+    "sqlparse>=0.5.0",
+
+    # Data models & config
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+
+    # HTTP client (for n8n API)
+    "httpx>=0.28.0",
+
+    # Schema loading
+    "pyyaml>=6.0.0",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+    "structlog>=24.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "black>=24.0.0",
+    "mypy>=1.13.0",
+    "httpx>=0.28.0",  # for TestClient
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "ASYNC"]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

@@ -1,0 +1,70 @@
+{
+  "permissions": {
+    "allowedTools": [
+      "Read",
+      "Write(src/**)",
+      "Write(tests/**)",
+      "Write(config/**)",
+      "Bash(python *)",
+      "Bash(pip *)",
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(black *)",
+      "Bash(git *)",
+      "Bash(docker compose *)",
+      "Bash(curl *)",
+      "mcp__postgres-dev__*",
+      "mcp__mongo-dev__*",
+      "mcp__github__*"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Bash(rm -rf *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write(*.py)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/120183-arunk/workspace/QueryMind && ruff check --fix \"$file\" 2>/dev/null; black --quiet \"$file\" 2>/dev/null; true"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(src/generators/*.py)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/120183-arunk/workspace/QueryMind && python -m pytest tests/generators/ -x -q --tb=short 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(src/validators/*.py)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/120183-arunk/workspace/QueryMind && python -m pytest tests/validators/ -x -q --tb=short 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"$command\" | grep -qiE '(DROP\\s+(TABLE|DATABASE|INDEX)|TRUNCATE|DELETE\\s+FROM\\s+(?!.*WHERE))' && echo 'BLOCKED: Dangerous SQL operation detected. Use explicit WHERE clauses for DELETE, and never DROP/TRUNCATE via CLI.' && exit 1 || exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

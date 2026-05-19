@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "postgres-dev": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-postgres", "postgresql://localhost:5432/querymind_dev"],
+      "description": "Local PostgreSQL for schema introspection and query validation"
+    },
+    "mongo-dev": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-mongodb", "mongodb://localhost:27017/querymind_dev"],
+      "description": "Local MongoDB for collection sampling and pipeline testing"
+    },
+    "github": {
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-github"],
+      "description": "GitHub integration for PRs and issues",
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
