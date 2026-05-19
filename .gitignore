@@ -1,16 +1,46 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
+build/
 .venv/
 venv/
+
+# Environment
 .env
 .env.*
 !.env.example
-*.db
+
+# Testing & linting
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Databases / local data
+*.db
+*.sqlite3
+
+# Docker volumes (if mounted locally)
+pgdata/
+mongodata/
+qdrantdata/
+n8ndata/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Claude Code
 .claude/settings.local.json
+
+# Archives
+*.tar.gz
+*.zip
